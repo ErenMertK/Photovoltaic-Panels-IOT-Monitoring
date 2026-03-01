@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PVision</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  
+  <style>
+    /* Uyku Modu Uyarı Stilleri */
+    .sleep-alert {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 600px;
+      display: none;
+      animation: pulseAlert 2s ease-in-out infinite;
+    }
+    
+    .sleep-alert.active {
+      display: block;
+    }
+    
+    .sleep-alert-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .sleep-icon {
+      font-size: 32px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    .sleep-alert-title {
+      color: #f59e0b;
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .sleep-alert-message {
+      color: #cbd5e1;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 8px 0;
+    }
+    
+    .sleep-alert-details {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    
+    .sleep-detail-item {
+      display: flex;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 6px 0;
+    }
+    
+    .sleep-detail-value {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+    
+    @keyframes pulseAlert {
+      0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.5); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    /* Kart'ları biraz şeffaflaştır uyku modunda */
+    .cards.sleep-mode .card {
+      opacity: 0.6;
+      filter: grayscale(0.3);
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">
+    <a href="index.html"><img src="assets/pvision-logo.png" class="logo" alt="PVision logo" /></a>
+    <h1>PVision</h1>
+  </div>
+
+  <nav class="top-menu">
+    <a href="index.html" class="active">Anlık İzleme</a>
+    <a href="history.html">Geçmiş Veriler</a>
+    <a href="#" id="logoutBtn" style="color:#ef4444; margin-left:20px;">Çıkış Yap</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- UYKU MODU UYARI KUTUSU -->
+  <!-- <div id="sleepAlert" class="sleep-alert">
+    <div class="sleep-alert-header">
+      <span class="sleep-icon">💤</span>
+      <h3 class="sleep-alert-title">Sistem Uyku Modunda</h3>
+    </div>
+    <p class="sleep-alert-message">
+      Şu anda ölçüm yapılmıyor. Solar panel voltajı düşük seviyede olduğu için ESP32 güç tasarrufu moduna geçti.
+    </p>
+    <div class="sleep-alert-details">
+      <div class="sleep-detail-item">
+        <span>Durum:</span>
+        <span class="sleep-detail-value">Uyku Modu Aktif</span>
+      </div>
+      <div class="sleep-detail-item">
+        <span>Sonraki Kontrol:</span>
+        <span class="sleep-detail-value" id="nextCheckTime">30 dakika sonra</span>
+      </div>
+      <div class="sleep-detail-item">
+        <span>Neden:</span>
+        <span class="sleep-detail-value">Voltaj < 4V</span>
+      </div>
+    </div>
+  </div> -->
+
+  <div class="cards" id="cardsContainer">
+    <div class="card">
+      <h3>Solar Panel Gerilim</h3>
+      <div class="value" id="volt">-- V</div>
+    </div>
+
+    <div class="card">
+      <h3>Solar Panel Akım</h3>
+      <div class="value" id="amp">-- A</div>
+    </div>
+
+    <div class="card">
+      <h3>Güç Çıkışı</h3>
+      <div class="value" id="power">-- W</div>
+    </div>
+
+    <div class="card">
+      <h3>Sistem Durumu</h3>
+      <div class="value" id="status" style="font-size:18px;">Bağlanıyor...</div>
+
+      <div class="battery-wrap">
+        <div id="batteryBar" class="battery-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-box"><canvas id="voltChart"></canvas></div>
+    <div class="chart-box"><canvas id="ampChart"></canvas></div>
+    <div class="chart-box"><canvas id="powerChart"></canvas></div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { onData, auth, signOut, onAuthStateChanged } from "./firebase.js";
+
+  // --- 🛡️ GÜVENLİK KONTROLÜ ---
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      console.log("Oturum kapalı, yönlendiriliyor...");
+      window.location.href = "login.html";
+    }
+  });
+
+  // --- 🚪 ÇIKIŞ BUTONU ---
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      signOut(auth)
+        .then(() => (window.location.href = "login.html"))
+        .catch((error) => console.error("Çıkış hatası:", error));
+    });
+  }
+
+  // --- GRAFİK AYARLARI ---
+  const maxDataPoints = 30;
+  const labels = [];
+
+  const createChart = (id, label, color) => {
+    const ctx = document.getElementById(id).getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, color + "80");
+    gradient.addColorStop(1, color + "00");
+
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label,
+          data: [],
+          borderColor: color,
+          backgroundColor: gradient,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, labels: { color: "white" } } },
+        scales: {
+          x: { display: false },
+          y: {
+            grid: { color: "#334155" },
+            ticks: { color: "#94a3b8" },
+          },
+        },
+      },
+    });
+  };
+
+  const voltChart  = createChart("voltChart",  "Gerilim (V)", "#38bdf8");
+  const ampChart   = createChart("ampChart",   "Akım (A)",    "#4ade80");
+  const powerChart = createChart("powerChart", "Güç (W)",     "#facc15");
+
+  // --- UYKU MODU KONTROLÜ ---
+  let isInSleepMode = false;
+  const sleepAlert = document.getElementById("sleepAlert");
+  const cardsContainer = document.getElementById("cardsContainer");
+
+  // Sistem durumu izleme (panel_1/sistem altındaki durum)
+  onData("panel_1/sistem", (snapshot) => {
+    const sistemData = snapshot.val();
+    
+    if (sistemData && sistemData.durum === "uyku_modu" && sistemData.voltaj_dusuk === true) {
+      // Uyku moduna geçti
+      if (!isInSleepMode) {
+        console.log("⚠️ Sistem uyku moduna geçti");
+        isInSleepMode = true;
+        sleepAlert.classList.add("active");
+        cardsContainer.classList.add("sleep-mode");
+        
+        document.getElementById("status").innerText = "Uyku Modu 💤";
+        document.getElementById("status").className = "value";
+        document.getElementById("status").style.color = "#f59e0b";
+      }
+    } else if (sistemData && (sistemData.durum === "aktif" || sistemData.voltaj_dusuk === false)) {
+      // Sistemden uyandı veya voltaj normale döndü
+      if (isInSleepMode) {
+        console.log("✅ Sistem uyku modundan uyandı - voltaj normale döndü");
+        isInSleepMode = false;
+        sleepAlert.classList.remove("active");
+        cardsContainer.classList.remove("sleep-mode");
+        
+        // Durumu sıfırla
+        document.getElementById("status").innerText = "Sistem Çevrimiçi 🟢";
+        document.getElementById("status").className = "value status-online";
+        document.getElementById("status").style.color = "";
+      }
+    } else if (!sistemData) {
+      // Veri yoksa ve uyku modundaysa uyarıyı kaldır
+      if (isInSleepMode) {
+        console.log("ℹ️ Sistem verisi yok - uyku modu temizleniyor");
+        isInSleepMode = false;
+        sleepAlert.classList.remove("active");
+        cardsContainer.classList.remove("sleep-mode");
+      }
+    }
+  });
+
+  // --- VERİ DİNLEME (REALTIME) ---
+  onData("panel_1", (snapshot) => {
+    const data = snapshot.val();
+    const statusElem = document.getElementById("status");
+
+    if (data) {
+      // Uyku modunda değilse normal göster
+      if (!isInSleepMode) {
+        statusElem.innerText = "Sistem Çevrimiçi 🟢";
+        statusElem.className = "value status-online";
+        statusElem.style.color = "";
+      }
+
+      const v = data.voltaj || 0;
+      const a = data.akim || 0;
+      const p = data.guc || 0;
+
+      document.getElementById("volt").innerText  = v + " V";
+      document.getElementById("amp").innerText   = a + " A";
+      document.getElementById("power").innerText = p + " W";
+
+      // Batarya %
+      let batPercent = ((v - 10.5) / (14.5 - 10.5)) * 100;
+      if (batPercent > 100) batPercent = 100;
+      if (batPercent < 0) batPercent = 0;
+      document.getElementById("batteryBar").style.width = batPercent + "%";
+
+      const time = new Date().toLocaleTimeString();
+
+      if (labels.length > maxDataPoints) {
+        labels.shift();
+        voltChart.data.datasets[0].data.shift();
+        ampChart.data.datasets[0].data.shift();
+        powerChart.data.datasets[0].data.shift();
+      }
+
+      labels.push(time);
+      voltChart.data.datasets[0].data.push(v);
+      ampChart.data.datasets[0].data.push(a);
+      powerChart.data.datasets[0].data.push(p);
+
+      voltChart.update();
+      ampChart.update();
+      powerChart.update();
+    } else {
+      if (!isInSleepMode) {
+        statusElem.innerText = "Veri Yok 🔴";
+        statusElem.className = "value status-offline";
+        statusElem.style.color = "";
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

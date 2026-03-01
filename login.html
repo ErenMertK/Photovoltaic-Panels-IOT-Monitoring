@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap - PV IoT</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #0f172a;
+        }
+        .login-card {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            color: white;
+            box-sizing: border-box; /* Taşmayı engeller */
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        button:hover { background: #0ea5e9; }
+        .error { color: #ef4444; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <img src="assets/pvision-logo.png" alt="logo" style="width: 250px;">
+        <h2 style="color: #38bdf8; margin: 0 0 20px 0;">Sistem Girişi</h2>
+        
+        <input type="email" id="email" placeholder="E-posta Adresi">
+        <input type="password" id="password" placeholder="Şifre">
+        
+        <button id="loginBtn">Giriş Yap</button>
+        <div id="errorMsg" class="error">Hatalı E-posta veya Şifre!</div>
+    </div>
+
+    <script type="module">
+        import { auth, signInWithEmailAndPassword, onAuthStateChanged } from "./firebase.js";
+
+        // Eğer zaten giriş yapılmışsa direkt panele at
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = "index.html";
+            }
+        });
+
+        document.getElementById("loginBtn").addEventListener("click", () => {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("password").value;
+            const errorDiv = document.getElementById("errorMsg");
+            const btn = document.getElementById("loginBtn");
+
+            btn.innerText = "Kontrol ediliyor...";
+
+            signInWithEmailAndPassword(auth, email, pass)
+                .then((userCredential) => {
+                    // Başarılı giriş
+                    window.location.href = "index.html";
+                })
+                .catch((error) => {
+                    // Hatalı giriş
+                    console.error(error);
+                    errorDiv.style.display = "block";
+                    btn.innerText = "Giriş Yap";
+                });
+        });
+    </script>
+</body>
+</html>

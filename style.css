@@ -1,0 +1,201 @@
+/* --- TEMEL AYARLAR --- */
+:root{
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --border: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --brand: #38bdf8;
+  --ok: #4ade80;
+  --bad: #ef4444;
+}
+
+*{ box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* --- ÜST MENÜ (HEADER) --- */
+header {
+  background-color: var(--panel);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;                 /* logo/menü arası nefes */
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo + Başlık Bloğu */
+.brand{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;              /* taşmayı kontrol eder */
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--brand);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  white-space: nowrap;       /* PVision tek satır */
+}
+
+/* Logo */
+.logo{
+  height: 56px;              /* menüye daha iyi oturur */
+  width: auto;
+  display: block;
+   transform: scale(1.2);
+}
+
+/* Menü */
+.top-menu{
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;           /* küçük ekranda alt satıra geçsin */
+  justify-content: flex-end;
+}
+
+.top-menu a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.2s, background-color 0.2s;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.top-menu a:hover,
+.top-menu a.active {
+  color: var(--brand);
+  background: rgba(56, 189, 248, 0.10);
+}
+
+/* Çıkış linki ayrıca kırmızı dursun ama hover’da da kontrollü kalsın */
+#logoutBtn{
+  color: var(--bad) !important;
+  background: rgba(239, 68, 68, 0.10);
+}
+#logoutBtn:hover{
+  background: rgba(239, 68, 68, 0.16);
+}
+
+/* --- KONTEYNER --- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* --- KARTLAR (Cards) --- */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.card {
+  background-color: var(--panel);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.10);
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: var(--brand);
+}
+
+.card h3 {
+  margin-top: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 10px 0;
+}
+
+/* --- DURUM GÖSTERGESİ --- */
+.status-online {
+  color: var(--ok);
+  font-weight: 800;
+}
+.status-offline {
+  color: var(--bad);
+  font-weight: 800;
+}
+
+/* --- BATARYA BAR (Sistem Durumu kartı içinde) --- */
+.battery-wrap{
+  width: 100%;
+  height: 10px;
+  background: #0b1220;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.battery-bar{
+  width: 0%;
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.5s;
+}
+
+/* --- GRAFİKLER --- */
+.charts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.chart-box {
+  background-color: var(--panel);
+  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  flex: 1;
+  min-width: 300px;
+  min-height: 250px;
+}
+
+/* --- MOBİL İYİLEŞTİRME --- */
+@media (max-width: 640px){
+  header{
+    padding: 0.9rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .top-menu{
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .logo{
+    height: 36px;
+  }
+  header h1{
+    font-size: 1.25rem;
+  }
+}

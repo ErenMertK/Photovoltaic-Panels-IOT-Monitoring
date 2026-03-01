@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geçmiş Veriler - PV IoT</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Tablo Stilleri */
+        .table-container {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #e2e8f0;
+        }
+
+        thead tr {
+            background-color: #0f172a;
+            border-bottom: 2px solid #38bdf8;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #334155;
+        }
+
+        tbody tr:hover {
+            background-color: #334155;
+        }
+
+        .loading-text {
+            text-align: center;
+            padding: 20px;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        /* --- EXCEL BUTONU STİLİ --- */
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .excel-btn {
+            background-color: #22c55e;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+        }
+
+        .excel-btn:hover { background-color: #16a34a; }
+        .excel-btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        
+        .summary-btn {
+            background-color: #3b82f6;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+        }
+
+        .summary-btn:hover { background-color: #2563eb; }
+        .summary-btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        
+        /* Silinme bilgisi için küçük uyarı */
+        .info-badge {
+            font-size: 12px;
+            background-color: #334155;
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: #94a3b8;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            color: #e2e8f0;
+        }
+
+        .pagination button {
+            background-color: #334155;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background-color: #475569;
+        }
+
+        .pagination button:disabled {
+            background-color: #1e293b;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="index.html"><img src="assets/pvision-logo.png" class="logo" alt="PVision logo" /></a>
+            <h1>PVision - Geçmiş Kayıtlar</h1>
+        </div>
+
+        <nav class="top-menu">
+            <a href="index.html">Anlık İzleme</a>
+            <a href="history.html" class="active">Geçmiş Veriler</a>
+            <a href="login.html" style="color: #ef4444; margin-left: 20px;">Çıkış Yap</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        
+        <div class="header-actions">
+            <div>
+                <span class="info-badge">Politika: Son 5040 Kayıt (1 Hafta) Tutulur</span>
+                <div id="cleanStatus" style="font-size: 12px; color: #ef4444; margin-top: 5px; height: 16px;"></div>
+                <div id="totalRecords" style="font-size: 12px; color: #38bdf8; margin-top: 3px;"></div>
+            </div>
+            
+            <div class="button-group">
+                <button id="downloadSummaryBtn" class="summary-btn" disabled>
+                    📊 Haftalık Özetler (Excel)
+                </button>
+                <button id="downloadBtn" class="excel-btn" disabled>
+                    📥 Tüm Verileri Excel Olarak İndir
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Tarih / Saat</th>
+                        <th>Ortalama Güç (Watt)</th>
+                        <th>Üretilen Enerji (Wh)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="3" class="loading-text">Veriler yükleniyor ve kontrol ediliyor...</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <button id="prevBtn">◀ Önceki</button>
+                <span id="pageInfo">Sayfa 1</span>
+                <button id="nextBtn">Sonraki ▶</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get, remove } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbO8Cj5nX05T3nYH0qI7crZyq5qZe1L3w",
+            authDomain: "bitirme-projesi-f5c5d.firebaseapp.com",
+            databaseURL: "https://bitirme-projesi-f5c5d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "bitirme-projesi-f5c5d",
+            storageBucket: "bitirme-projesi-f5c5d.firebasestorage.app",
+            messagingSenderId: "480418994148",
+            appId: "1:480418994148:web:5e333be6cbc605baa799f1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        let globalAllData = [];
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 50;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "login.html";
+            else {
+                // Kullanıcı giriş yaptıysa temizliği başlat
+                otomatikTemizle();
+            }
+        });
+
+        // --- 1. OTOMATİK TEMİZLEME FONKSİYONU (Garbage Collector) ---
+        async function otomatikTemizle() {
+            const MAX_KAYIT = 5040; // 1 Hafta
+            const statusDiv = document.getElementById("cleanStatus");
+            
+            const dbRef = ref(db, 'GecmisVeriler');
+
+            try {
+                const snapshot = await get(dbRef);
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const keys = Object.keys(data);
+                    const totalCount = keys.length;
+
+                    console.log(`Toplam kayıt sayısı: ${totalCount}`);
+
+                    if (totalCount > MAX_KAYIT) {
+                        const silinecekMiktar = totalCount - MAX_KAYIT;
+                        statusDiv.innerText = `⚠️ Sınır aşıldı! ${silinecekMiktar} adet eski kayıt siliniyor...`;
+                        
+                        // Firebase Push ID'leri zamana göre sıralıdır
+                        keys.sort(); 
+
+                        // İlk 'silinecekMiktar' kadarını al (En eskiler)
+                        const keysToDelete = keys.slice(0, silinecekMiktar);
+
+                        // *** SİLİNECEK VERİLERİN HAFTALIK ÖZETİNİ KAYDET ***
+                        await haftalikOzetKaydet(data, keysToDelete);
+
+                        // Döngüyle tek tek sil
+                        const promises = keysToDelete.map(key => remove(ref(db, `GecmisVeriler/${key}`)));
+                        
+                        await Promise.all(promises);
+                        statusDiv.innerText = `✅ Temizlik tamamlandı. ${silinecekMiktar} eski kayıt silindi ve haftalık özet kaydedildi.`;
+                        
+                        setTimeout(() => { statusDiv.innerText = ""; }, 5000);
+
+                    } else {
+                        console.log(`Kayıt sayısı (${totalCount}) sınırın (${MAX_KAYIT}) altında. Temizliğe gerek yok.`);
+                    }
+                }
+            } catch (error) {
+                console.error("Temizleme hatası:", error);
+            }
+        }
+
+        // --- HAFTALIK ÖZET KAYDETME FONKSİYONU ---
+        async function haftalikOzetKaydet(allData, deletingKeys) {
+            try {
+                // Silinecek verileri filtrele
+                const deletingData = deletingKeys.map(key => ({
+                    key: key,
+                    ...allData[key]
+                }));
+
+                if (deletingData.length === 0) return;
+
+                // İstatistikleri hesapla
+                let toplamGuc = 0;
+                let toplamEnerji = 0;
+                let sayac = 0;
+                let enEskiTarih = null;
+                let enYeniTarih = null;
+
+                deletingData.forEach(item => {
+                    if (item.guc) {
+                        toplamGuc += item.guc;
+                        sayac++;
+                    }
+                    if (item.enerji) {
+                        toplamEnerji += item.enerji;
+                    }
+                    
+                    if (item.timestamp) {
+                        if (!enEskiTarih || item.timestamp < enEskiTarih) {
+                            enEskiTarih = item.timestamp;
+                        }
+                        if (!enYeniTarih || item.timestamp > enYeniTarih) {
+                            enYeniTarih = item.timestamp;
+                        }
+                    }
+                });
+
+                const ortalamaGuc = sayac > 0 ? (toplamGuc / sayac) : 0;
+
+                // Haftalık özet objesi oluştur
+                const haftalikOzet = {
+                    baslangic_tarihi: enEskiTarih,
+                    bitis_tarihi: enYeniTarih,
+                    kayit_sayisi: deletingData.length,
+                    ortalama_guc: parseFloat(ortalamaGuc.toFixed(2)),
+                    toplam_enerji: parseFloat(toplamEnerji.toFixed(4)),
+                    olusturma_zamani: Date.now()
+                };
+
+                // Firebase'e kaydet
+                const { push } = await import("https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js");
+                const ozetRef = ref(db, 'HaftalikOzetler');
+                await push(ozetRef, haftalikOzet);
+
+                console.log("✅ Haftalık özet kaydedildi:", haftalikOzet);
+            } catch (error) {
+                console.error("Haftalık özet kaydetme hatası:", error);
+            }
+        }
+
+        // --- 2. TÜM VERİYİ ÇEKME (limitToLast KALDIRILDI) ---
+        const historyRef = ref(db, 'GecmisVeriler');
+
+        onValue(historyRef, (snapshot) => {
+            const tableBody = document.getElementById("tableBody");
+            const downloadBtn = document.getElementById("downloadBtn");
+            const totalRecordsDiv = document.getElementById("totalRecords");
+            
+            tableBody.innerHTML = "";
+            const data = snapshot.val();
+
+            if (!data) {
+                tableBody.innerHTML = "<tr><td colspan='3' class='loading-text'>Kayıt yok.</td></tr>";
+                downloadBtn.disabled = true;
+                totalRecordsDiv.innerText = "";
+                return;
+            }
+
+            // Tüm veriyi diziye çevir
+            let dataArray = Object.keys(data).map(key => ({
+                key: key,
+                ...data[key]
+            }));
+            
+            // Yeniden eskiye sırala
+            dataArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            globalAllData = dataArray;
+            downloadBtn.disabled = false;
+            
+            // Toplam kayıt sayısını göster
+            totalRecordsDiv.innerText = `📊 Toplam ${globalAllData.length} kayıt var`;
+
+            // İlk sayfayı göster
+            currentPage = 1;
+            renderPage();
+        });
+
+        // --- 3. SAYFALAMA FONKSİYONU ---
+        function renderPage() {
+            const tableBody = document.getElementById("tableBody");
+            const pageInfo = document.getElementById("pageInfo");
+            const prevBtn = document.getElementById("prevBtn");
+            const nextBtn = document.getElementById("nextBtn");
+
+            tableBody.innerHTML = "";
+
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const pageData = globalAllData.slice(startIndex, endIndex);
+
+            const totalPages = Math.ceil(globalAllData.length / ITEMS_PER_PAGE);
+
+            pageData.forEach(item => {
+                const row = document.createElement("tr");
+
+                let dateStr = "Bilinmiyor";
+                if (item.timestamp) {
+                    const date = new Date(item.timestamp);
+                    dateStr = date.toLocaleString("tr-TR");
+                }
+
+                const power = item.guc ? item.guc.toFixed(2) : "0.00";
+                const energy = item.enerji ? item.enerji.toFixed(4) : "-"; 
+
+                row.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td style="color: #facc15; font-weight:bold;">${power} W</td>
+                    <td style="color: #4ade80;">${energy} Wh</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            pageInfo.innerText = `Sayfa ${currentPage} / ${totalPages}`;
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+        }
+
+        // Sayfa değiştirme butonları
+        document.getElementById("prevBtn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage();
+            }
+        });
+
+        document.getElementById("nextBtn").addEventListener("click", () => {
+            const totalPages = Math.ceil(globalAllData.length / ITEMS_PER_PAGE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage();
+            }
+        });
+
+        // --- 4. EXCEL İNDİRME (TÜM VERİ) ---
+        document.getElementById("downloadBtn").addEventListener("click", () => {
+            if (globalAllData.length === 0) return;
+
+            let csvContent = "Tarih;Ortalama Guc (W);Uretilen Enerji (Wh)\n";
+            globalAllData.forEach(item => {
+                let dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString("tr-TR") : "Bilinmiyor";
+                let p = item.guc ? item.guc.toFixed(2).replace('.', ',') : "0,00";
+                let e = item.enerji ? item.enerji.toFixed(4).replace('.', ',') : "0,0000";
+                csvContent += `${dateStr};${p};${e}\n`;
+            });
+
+            const BOM = "\uFEFF"; 
+            const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const today = new Date().toISOString().slice(0,10);
+            link.setAttribute("download", `PV_Tum_Veriler_${today}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // --- 5. HAFTALIK ÖZETLERİ İNDİRME ---
+        let haftalikOzetler = [];
+        
+        // Haftalık özetleri dinle
+        const ozetlerRef = ref(db, 'HaftalikOzetler');
+        onValue(ozetlerRef, (snapshot) => {
+            const summaryBtn = document.getElementById("downloadSummaryBtn");
+            const data = snapshot.val();
+            
+            if (!data) {
+                summaryBtn.disabled = true;
+                haftalikOzetler = [];
+                return;
+            }
+
+            // Tüm özet veriyi diziye çevir
+            haftalikOzetler = Object.keys(data).map(key => ({
+                key: key,
+                ...data[key]
+            }));
+            
+            // Yeniden eskiye sırala
+            haftalikOzetler.sort((a, b) => (b.olusturma_zamani || 0) - (a.olusturma_zamani || 0));
+            
+            summaryBtn.disabled = false;
+        });
+
+        // Haftalık özetleri indirme butonu
+        document.getElementById("downloadSummaryBtn").addEventListener("click", () => {
+            if (haftalikOzetler.length === 0) return;
+
+            let csvContent = "Baslangic Tarihi;Bitis Tarihi;Kayit Sayisi;Ortalama Guc (W);Toplam Enerji (Wh);Olusturma Zamani\n";
+            
+            haftalikOzetler.forEach(item => {
+                let baslangicStr = item.baslangic_tarihi ? new Date(item.baslangic_tarihi).toLocaleString("tr-TR") : "Bilinmiyor";
+                let bitisStr = item.bitis_tarihi ? new Date(item.bitis_tarihi).toLocaleString("tr-TR") : "Bilinmiyor";
+                let olusturmaStr = item.olusturma_zamani ? new Date(item.olusturma_zamani).toLocaleString("tr-TR") : "Bilinmiyor";
+                let kayitSayisi = item.kayit_sayisi || 0;
+                let ortGuc = item.ortalama_guc ? item.ortalama_guc.toFixed(2).replace('.', ',') : "0,00";
+                let topEnerji = item.toplam_enerji ? item.toplam_enerji.toFixed(4).replace('.', ',') : "0,0000";
+                
+                csvContent += `${baslangicStr};${bitisStr};${kayitSayisi};${ortGuc};${topEnerji};${olusturmaStr}\n`;
+            });
+
+            const BOM = "\uFEFF"; 
+            const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const today = new Date().toISOString().slice(0,10);
+            link.setAttribute("download", `PV_Haftalik_Ozetler_${today}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+    </script>
+
+</body>
+</html>
