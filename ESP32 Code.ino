@@ -7,19 +7,16 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
-// --- AYARLAR ---
-#define WIFI_SSID "Kura"
-#define WIFI_PASSWORD "05234ek!"
-#define API_KEY "AIzaSyCbO8Cj5nX05T3nYH0qI7crZyq5qZe1L3w"
-#define DATABASE_URL "https://bitirme-projesi-f5c5d-default-rtdb.europe-west1.firebasedatabase.app/" 
+#define WIFI_SSID "****************"
+#define WIFI_PASSWORD "*****************"
+#define API_KEY "*************************"
+#define DATABASE_URL "**********************" 
 
-// --- UYKU MODU AYARLARI ---
 #define VOLTAGE_THRESHOLD 4.0
 #define SLEEP_DURATION 30
 #define uS_TO_S_FACTOR 1000000ULL
 #define TIME_TO_SLEEP (SLEEP_DURATION * 60)
 
-// --- NESNELER ---
 Adafruit_INA219 ina219;
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -27,16 +24,13 @@ FirebaseConfig config;
 
 bool signupOK = false;
 
-// --- ZAMANLAYICILAR ---
 unsigned long sendDataPrevMillis = 0;
 unsigned long historyPrevMillis = 0;
 const unsigned long historyInterval = 120000;
 
-// --- ORTALAMA İÇİN DEĞİŞKENLER ---
 float sumPower = 0.0;
 int readCount = 0;
 
-// --- RTC MEMORY ---
 RTC_DATA_ATTR float rtc_sumPower = 0.0;
 RTC_DATA_ATTR int rtc_readCount = 0;
 RTC_DATA_ATTR unsigned long rtc_historyTimer = 0;
@@ -98,7 +92,6 @@ void setup() {
     rtc_historyTimer = 0;
   }
   
-  // Sensör Başlatma
   if (!ina219.begin()) {
     Serial.println("HATA: INA219 bulunamadı!");
     while (1) { delay(10); }
@@ -106,7 +99,6 @@ void setup() {
   ina219.setCalibration_32V_2A();
   Serial.println("INA219 Bağlandı ✅");
 
-  // Voltaj Kontrolü
   if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
     if (!checkVoltage()) {
       goToSleep();
@@ -117,7 +109,6 @@ void setup() {
     historyPrevMillis = millis() - rtc_historyTimer;
   }
 
-  // Wi-Fi Bağlantısı
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Wi-Fi Baglaniyor");
   while (WiFi.status() != WL_CONNECTED) {
@@ -126,7 +117,6 @@ void setup() {
   }
   Serial.println("\nWi-Fi Baglandi!");
 
-  // NTP Senkronizasyonu
   configTime(3 * 3600, 0, "pool.ntp.org");
   Serial.print("NTP Bekleniyor");
   while (time(nullptr) < 100000) {
@@ -135,7 +125,6 @@ void setup() {
   }
   Serial.println("\nZaman Senkronize!");
 
-  // Firebase Yapılandırması
   config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
 
@@ -149,7 +138,6 @@ void setup() {
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
   
-  // Firebase Hazır Bekle
   Serial.print("Firebase kontrol");
   int fbWaitCount = 0;
   while (!Firebase.ready() && fbWaitCount < 20) {
@@ -159,7 +147,6 @@ void setup() {
   }
   Serial.println();
   
-  // Sistem Durumunu Güncelle
   if (Firebase.ready()) {
     FirebaseJson initJson;
     initJson.set("durum", "aktif");
@@ -182,7 +169,6 @@ void setup() {
 void loop() {
   if (Firebase.ready() && signupOK) {
     
-    // --- ANLIK VERİ (5 Saniye) ---
     if (millis() - sendDataPrevMillis > 5000 || sendDataPrevMillis == 0) {
       sendDataPrevMillis = millis();
 
@@ -196,7 +182,6 @@ void loop() {
       if (current_A < 0) current_A = 0;
       if (power_W < 0) power_W = 0;
 
-      // ⚡ VOLTAJ KONTROLÜ
       if (busVoltage < VOLTAGE_THRESHOLD) {
         goToSleep();
         return;
@@ -208,7 +193,6 @@ void loop() {
       sumPower += power_W;
       readCount++;
 
-      // Firebase'e Gönder
       FirebaseJson json;
       json.set("voltaj", busVoltage);
       json.set("akim", current_A);
@@ -217,14 +201,12 @@ void loop() {
 
       Firebase.RTDB.updateNode(&fbdo, "panel_1", &json);
 
-      // Sistem Durumu Güncelle
       FirebaseJson statusJson;
       statusJson.set("durum", "aktif");
       statusJson.set("voltaj_dusuk", false);
       Firebase.RTDB.updateNode(&fbdo, "panel_1/sistem", &statusJson);
     }
 
-    // --- GEÇMİŞ VERİ (2 Dakika) ---
     if (millis() - historyPrevMillis > historyInterval) {
       historyPrevMillis = millis();
 
